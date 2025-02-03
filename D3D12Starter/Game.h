@@ -2,6 +2,11 @@
 
 #include <d3d12.h>
 #include <wrl/client.h>
+#include <vector>
+
+#include "Camera.h"
+#include "Mesh.h"
+#include "GameEntity.h"
 
 class Game
 {
@@ -19,14 +24,11 @@ public:
 	void OnResize();
 
 private:
-	// Initialization helper methods - feel free to customize, combine, remove, etc.
+	// Initialization helper methods
+	void CreateCameras();
 	void CreateGeometry();
+	void CreateEntities();
 	void CreateRootSigAndPipelineState();
-
-	// Note the usage of ComPtr below
-	//  - This is a smart pointer for objects that abide by the
-	//     Component Object Model, which DirectX objects do
-	//  - More info here: https://github.com/Microsoft/DirectXTK/wiki/ComPtr
 
 	// Pipeline
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature;
@@ -43,5 +45,10 @@ private:
 	D3D12_VIEWPORT viewport{};
 	D3D12_RECT scissorRect{};
 
+	// Game variables
+	int activeCameraIndex = 0;
+	std::vector<std::shared_ptr<Camera>> cameras;
+	std::vector<std::shared_ptr<Mesh>> meshes;
+	std::vector<std::shared_ptr<GameEntity>> entities;
 };
 
