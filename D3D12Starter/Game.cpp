@@ -24,7 +24,9 @@ void Game::Initialize()
 	CreateRootSigAndPipelineState();
 	CreateCameras();
 	CreateGeometry();
+	CreateMaterials();
 	CreateEntities();
+	CreateLights();
 }
 
 
@@ -90,28 +92,70 @@ void Game::CreateRootSigAndPipelineState()
 
 	// Root Signature
 	{
-		// Define a table of CBV's (constant buffer views)
-		D3D12_DESCRIPTOR_RANGE cbvTable = {};
-		cbvTable.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
-		cbvTable.NumDescriptors = 1;
-		cbvTable.BaseShaderRegister = 0;
-		cbvTable.RegisterSpace = 0;
-		cbvTable.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+		// Describe the range of CBVs needed for the vertex shader
+		D3D12_DESCRIPTOR_RANGE cbvRangeVS = {};
+		cbvRangeVS.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
+		cbvRangeVS.NumDescriptors = 1;
+		cbvRangeVS.BaseShaderRegister = 0;
+		cbvRangeVS.RegisterSpace = 0;
+		cbvRangeVS.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-		// Define the root parameter
-		D3D12_ROOT_PARAMETER rootParam = {};
-		rootParam.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-		rootParam.ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
-		rootParam.DescriptorTable.NumDescriptorRanges = 1;
-		rootParam.DescriptorTable.pDescriptorRanges = &cbvTable;
+		// Describe the range of CBVs needed for the pixel shader
+		D3D12_DESCRIPTOR_RANGE cbvRangePS = {};
+		cbvRangePS.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
+		cbvRangePS.NumDescriptors = 1;
+		cbvRangePS.BaseShaderRegister = 0;
+		cbvRangePS.RegisterSpace = 0;
+		cbvRangePS.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-		// Describe the overall the root signature
+		// Create a range of SRV's for textures
+		D3D12_DESCRIPTOR_RANGE srvRange = {};
+		srvRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+		srvRange.NumDescriptors = 4;	// Set to max number of textures at once (match pixel shader!)
+		srvRange.BaseShaderRegister = 0;	// Starts at s0 (match pixel shader!)
+		srvRange.RegisterSpace = 0;
+		srvRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+		// Create the root parameters
+		D3D12_ROOT_PARAMETER rootParams[3] = {};
+
+		// CBV table param for vertex shader
+		rootParams[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		rootParams[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+		rootParams[0].DescriptorTable.NumDescriptorRanges = 1;
+		rootParams[0].DescriptorTable.pDescriptorRanges = &cbvRangeVS;
+
+		// CBV table param for pixel shader
+		rootParams[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		rootParams[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+		rootParams[1].DescriptorTable.NumDescriptorRanges = 1;
+		rootParams[1].DescriptorTable.pDescriptorRanges = &cbvRangePS;
+
+		// SRV table param
+		rootParams[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		rootParams[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+		rootParams[2].DescriptorTable.NumDescriptorRanges = 1;
+		rootParams[2].DescriptorTable.pDescriptorRanges = &srvRange;
+
+		// Create a single static sampler (available to all pixel shaders at the same slot)
+		D3D12_STATIC_SAMPLER_DESC anisoWrap = {};
+		anisoWrap.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		anisoWrap.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		anisoWrap.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		anisoWrap.Filter = D3D12_FILTER_ANISOTROPIC;
+		anisoWrap.MaxAnisotropy = 16;
+		anisoWrap.MaxLOD = D3D12_FLOAT32_MAX;
+		anisoWrap.ShaderRegister = 0;  // register(s0)
+		anisoWrap.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+		D3D12_STATIC_SAMPLER_DESC samplers[] = { anisoWrap };
+
+		// Describe the full root signature
 		D3D12_ROOT_SIGNATURE_DESC rootSig = {};
 		rootSig.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-		rootSig.NumParameters = 1;
-		rootSig.pParameters = &rootParam;
-		rootSig.NumStaticSamplers = 0;
-		rootSig.pStaticSamplers = 0;
+		rootSig.NumParameters = ARRAYSIZE(rootParams);
+		rootSig.pParameters = rootParams;
+		rootSig.NumStaticSamplers = ARRAYSIZE(samplers);
+		rootSig.pStaticSamplers = samplers;
 
 		ID3DBlob* serializedRootSig = 0;
 		ID3DBlob* errors = 0;
@@ -245,21 +289,65 @@ void Game::CreateGeometry()
 
 
 // --------------------------------------------------------
+// Creates the materials by loading the textures
+// --------------------------------------------------------
+void Game::CreateMaterials()
+{
+	materials.push_back(std::make_shared<Material>(
+		pipelineState, 
+		DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f),
+		DirectX::XMFLOAT2(1.0f, 1.0f),
+		DirectX::XMFLOAT2(0.0f, 0.0f)
+	));
+	materials[0]->AddTexture(Graphics::LoadTexture(FixPath(L"../../Assets/Textures/cobblestone_albedo.png").c_str()), 0);
+	//materials[0]->AddTexture(Graphics::LoadTexture(FixPath(L"../../Assets/Textures/cobblestone_metal.png").c_str()), 1);
+	//materials[0]->AddTexture(Graphics::LoadTexture(FixPath(L"../../Assets/Textures/cobblestone_normals.png").c_str()), 2);
+	//materials[0]->AddTexture(Graphics::LoadTexture(FixPath(L"../../Assets/Textures/cobblestone_roughness.png").c_str()), 3);
+	materials[0]->FinalizeMaterial();
+}
+
+
+// --------------------------------------------------------
 // Creates the GameEntities that will be drawn to the screen
 // --------------------------------------------------------
 void Game::CreateEntities()
 {
-	entities.push_back(std::make_shared<GameEntity>(meshes[0])); // Cube
+	entities.push_back(std::make_shared<GameEntity>(meshes[0], materials[0])); // Cube
 	entities[0]->GetTransform()->SetPosition(-2.0f, -0.3f, 1.0f);
 	entities[0]->GetTransform()->SetScale(0.5f, 0.5f, 0.5f);
 
-	entities.push_back(std::make_shared<GameEntity>(meshes[5])); // Sphere
+	entities.push_back(std::make_shared<GameEntity>(meshes[5], materials[0])); // Sphere
 	entities[1]->GetTransform()->SetPosition(0.0f, 0.5f, 0.0f);
 	entities[1]->GetTransform()->SetScale(0.5f, 0.5f, 0.5f);
 
-	entities.push_back(std::make_shared<GameEntity>(meshes[2])); // Helix
+	entities.push_back(std::make_shared<GameEntity>(meshes[2], materials[0])); // Helix
 	entities[2]->GetTransform()->SetPosition(2.0f, 0.2f, 0.0f);
 	entities[2]->GetTransform()->SetScale(0.5f, 0.5f, 0.5f);
+}
+
+
+// --------------------------------------------------------
+// Creates all the lights in the scene
+// --------------------------------------------------------
+void Game::CreateLights()
+{
+	// Main directional
+	lights.push_back(Light{});
+	lights[0].Direction = XMFLOAT3(0.0f, -2.0f, 1.0f);
+	lights[0].Color = XMFLOAT3(1.0f, 1.0f, 1.0f);
+	lights[0].Intensity = 1.0f;
+
+	// Added directional
+	lights.push_back(Light{});
+	lights[1].Direction = XMFLOAT3(0.0f, -1.0f, 0.3f);
+	lights[1].Color = XMFLOAT3(1.0f, 1.0f, 1.0f);
+	lights[1].Intensity = 1.0f;
+
+	// Added directional
+	lights.push_back(Light{});
+	lights[2].Direction = XMFLOAT3(1.0f, 1.0f, 2.3f);
+	lights[2].Color = XMFLOAT3(1.0f, 1.0f, 1.0f);
+	lights[2].Intensity = 1.0f;
 }
 
 
@@ -381,6 +469,15 @@ void Game::Draw(float deltaTime, float totalTime)
 		// Draw loop
 		for (int i = 0; i < entities.size(); i++)
 		{
+			// Material setup
+			std::shared_ptr<Material> mat = entities[i]->GetMaterial();
+			Graphics::CommandList->SetPipelineState(mat->GetPipelineState().Get());
+			// Set the SRV descriptor handle for this material's textures
+			// Note: This assumes that descriptor table 2 is for textures (as per our root sig)
+			Graphics::CommandList->SetGraphicsRootDescriptorTable(
+				2, mat->GetFinalGPUHandleForSRVs());
+			
+			// Vertex shader data and cbuffer setup
 			VertexShaderExternalData shaderData =
 			{
 				entities[i]->GetTransform()->GetWorldMatrix(),
@@ -389,6 +486,29 @@ void Game::Draw(float deltaTime, float totalTime)
 			};
 			D3D12_GPU_DESCRIPTOR_HANDLE cbvHandle = Graphics::FillNextConstantBufferAndGetGPUDescriptorHandle(&shaderData, sizeof(VertexShaderExternalData));
 			Graphics::CommandList->SetGraphicsRootDescriptorTable(0, cbvHandle);
+
+			// Pixel shader data and cbuffer setup
+			{
+				PixelShaderExternalData psData = {};
+				psData.uvScale = mat->GetUVScale();
+				psData.uvOffset = mat->GetUVOffset();
+				psData.cameraPosition = cameras[activeCameraIndex]->GetTransform()->GetPosition();
+				psData.lightCount = lightCount;
+				memcpy(psData.lights, &lights[0], sizeof(Light) * MAX_LIGHTS);
+
+				// Send this to a chunk of the constant buffer heap
+				// and grab the GPU handle for it so we can set it for this draw
+				D3D12_GPU_DESCRIPTOR_HANDLE cbHandlePS =
+					Graphics::FillNextConstantBufferAndGetGPUDescriptorHandle(
+						(void*)(&psData), sizeof(PixelShaderExternalData));
+
+				// Set this constant buffer handle
+				// Note: This assumes that descriptor table 1 is the
+				//       place to put this particular descriptor.  This
+				//       is based on how we set up our root signature.
+				Graphics::CommandList->SetGraphicsRootDescriptorTable(
+					1, cbHandlePS);
+			}
 
 			D3D12_VERTEX_BUFFER_VIEW vbView = entities[i]->GetMesh()->GetVertexBufferView();
 			D3D12_INDEX_BUFFER_VIEW ibView = entities[i]->GetMesh()->GetIndexBufferView();

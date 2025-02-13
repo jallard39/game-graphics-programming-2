@@ -362,6 +362,9 @@ Mesh::~Mesh()
 	// Empty for now
 }
 
+// ----------------------
+// GETTERS
+// ----------------------
 
 Microsoft::WRL::ComPtr<ID3D12Resource> Mesh::GetVertexBuffer() 
 {

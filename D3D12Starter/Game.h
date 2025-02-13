@@ -6,7 +6,9 @@
 
 #include "Camera.h"
 #include "Mesh.h"
+#include "Material.h"
 #include "GameEntity.h"
+#include "Lights.h"
 
 class Game
 {
@@ -27,7 +29,9 @@ private:
 	// Initialization helper methods
 	void CreateCameras();
 	void CreateGeometry();
+	void CreateMaterials();
 	void CreateEntities();
+	void CreateLights();
 	void CreateRootSigAndPipelineState();
 
 	// Pipeline
@@ -47,8 +51,11 @@ private:
 
 	// Game variables
 	int activeCameraIndex = 0;
+	int lightCount = 2;
 	std::vector<std::shared_ptr<Camera>> cameras;
 	std::vector<std::shared_ptr<Mesh>> meshes;
+	std::vector<std::shared_ptr<Material>> materials;
 	std::vector<std::shared_ptr<GameEntity>> entities;
+	std::vector<Light> lights;
 };
 
