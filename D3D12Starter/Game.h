@@ -51,7 +51,7 @@ private:
 
 	// Game variables
 	int activeCameraIndex = 0;
-	int lightCount = 2;
+	int lightCount = 0;
 	std::vector<std::shared_ptr<Camera>> cameras;
 	std::vector<std::shared_ptr<Mesh>> meshes;
 	std::vector<std::shared_ptr<Material>> materials;

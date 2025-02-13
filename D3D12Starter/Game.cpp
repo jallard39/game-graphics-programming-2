@@ -299,10 +299,10 @@ void Game::CreateMaterials()
 		DirectX::XMFLOAT2(1.0f, 1.0f),
 		DirectX::XMFLOAT2(0.0f, 0.0f)
 	));
-	materials[0]->AddTexture(Graphics::LoadTexture(FixPath(L"../../Assets/Textures/cobblestone_albedo.png").c_str()), 0);
-	//materials[0]->AddTexture(Graphics::LoadTexture(FixPath(L"../../Assets/Textures/cobblestone_metal.png").c_str()), 1);
-	//materials[0]->AddTexture(Graphics::LoadTexture(FixPath(L"../../Assets/Textures/cobblestone_normals.png").c_str()), 2);
-	//materials[0]->AddTexture(Graphics::LoadTexture(FixPath(L"../../Assets/Textures/cobblestone_roughness.png").c_str()), 3);
+	materials[0]->AddTexture(Graphics::LoadTexture(FixPath(L"../../Assets/Textures/Cobblestone/cobblestone_albedo.png").c_str()), 0);
+	materials[0]->AddTexture(Graphics::LoadTexture(FixPath(L"../../Assets/Textures/Cobblestone/cobblestone_metal.png").c_str()), 1);
+	materials[0]->AddTexture(Graphics::LoadTexture(FixPath(L"../../Assets/Textures/Cobblestone/cobblestone_normals.png").c_str()), 2);
+	materials[0]->AddTexture(Graphics::LoadTexture(FixPath(L"../../Assets/Textures/Cobblestone/cobblestone_roughness.png").c_str()), 3);
 	materials[0]->FinalizeMaterial();
 }
 
@@ -336,18 +336,21 @@ void Game::CreateLights()
 	lights[0].Direction = XMFLOAT3(0.0f, -2.0f, 1.0f);
 	lights[0].Color = XMFLOAT3(1.0f, 1.0f, 1.0f);
 	lights[0].Intensity = 1.0f;
+	lightCount++;
 
-	// Added directional
-	lights.push_back(Light{});
-	lights[1].Direction = XMFLOAT3(0.0f, -1.0f, 0.3f);
-	lights[1].Color = XMFLOAT3(1.0f, 1.0f, 1.0f);
-	lights[1].Intensity = 1.0f;
+	//// Added directional
+	//lights.push_back(Light{});
+	//lights[1].Direction = XMFLOAT3(0.0f, -1.0f, 0.3f);
+	//lights[1].Color = XMFLOAT3(1.0f, 1.0f, 1.0f);
+	//lights[1].Intensity = 1.0f;
+	//lightCount++;
 
-	// Added directional
-	lights.push_back(Light{});
-	lights[2].Direction = XMFLOAT3(1.0f, 1.0f, 2.3f);
-	lights[2].Color = XMFLOAT3(1.0f, 1.0f, 1.0f);
-	lights[2].Intensity = 1.0f;
+	//// Added directional
+	//lights.push_back(Light{});
+	//lights[2].Direction = XMFLOAT3(1.0f, 1.0f, 2.3f);
+	//lights[2].Color = XMFLOAT3(1.0f, 1.0f, 1.0f);
+	//lights[2].Intensity = 1.0f;
+	//lightCount++;
 }
 
 
@@ -483,6 +486,7 @@ void Game::Draw(float deltaTime, float totalTime)
 				entities[i]->GetTransform()->GetWorldMatrix(),
 				cameras[activeCameraIndex]->GetViewMatrix(),
 				cameras[activeCameraIndex]->GetProjectionMatrix(),
+				entities[i]->GetTransform()->GetWorldInverseTransposeMatrix(),
 			};
 			D3D12_GPU_DESCRIPTOR_HANDLE cbvHandle = Graphics::FillNextConstantBufferAndGetGPUDescriptorHandle(&shaderData, sizeof(VertexShaderExternalData));
 			Graphics::CommandList->SetGraphicsRootDescriptorTable(0, cbvHandle);

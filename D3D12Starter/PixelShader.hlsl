@@ -6,7 +6,7 @@ Texture2D NormalMap : register(t2);
 Texture2D RoughnessMap : register(t3);
 
 SamplerState BasicSampler : register(s0);
-SamplerComparisonState ShadowSampler : register(s1);
+//SamplerComparisonState ShadowSampler : register(s1);
 
 // Struct representing data from a constant buffer
 cbuffer ExternalData : register(b0)
@@ -62,18 +62,6 @@ float4 main(VertexToPixel input) : SV_TARGET
     float3 totalLight = float3(0.0f, 0.0f, 0.0f);
     for (int i = 0; i < lightCount; i++)
     {
-        /*
-            if (cel == 1)
-        {
-            float3 lightDir = -1 * normalize(lights[i].Direction);
-            float diffuse = DiffusePBR(input.normal, lightDir);
-            float2 rampUV = float2(diffuse, 0.5);
-            float celDiffuse = Ramp.Sample(BasicSampler, rampUV).r;
-            float3 lightResult = celDiffuse * surfaceColor.rgb * lights[i].Intensity;
-            if (i == 0)
-                lightResult *= shadowAmount;
-            totalLight += lightResult;
-        } */
         if (lights[i].Type == 0)
         {
             float3 lightResult = DirectionalLight(input.normal, lights[i], v, roughness, surfaceColor.rgb, specularColor, metalness);
