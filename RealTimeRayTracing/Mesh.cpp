@@ -347,9 +347,6 @@ void Mesh::CreateBuffers(
 	vertexBuffer = Graphics::CreateStaticBuffer(sizeof(Vertex), numVertices, vertices);
 	indexBuffer = Graphics::CreateStaticBuffer(sizeof(unsigned int), numIndices, indices);
 
-	// Create the raytracing acceleration structure for this mesh
-	raytracingData = RayTracing::CreateBottomLevelAccelerationStructureForMesh(this);
-
 	// Set up the views
 	vbView.StrideInBytes = sizeof(Vertex);
 	vbView.SizeInBytes = sizeof(Vertex) * numVertices;
@@ -358,6 +355,9 @@ void Mesh::CreateBuffers(
 	ibView.Format = DXGI_FORMAT_R32_UINT;
 	ibView.SizeInBytes = sizeof(unsigned int) * numIndices;
 	ibView.BufferLocation = indexBuffer->GetGPUVirtualAddress();
+
+	// Create the raytracing acceleration structure for this mesh
+	raytracingData = RayTracing::CreateBottomLevelAccelerationStructureForMesh(this);
 }
 
 

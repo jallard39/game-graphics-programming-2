@@ -173,7 +173,7 @@ void Miss(inout RayPayload payload)
 {
 	// Nothing was hit, so return black for now.
 	// Ideally this is where we would do skybox stuff!
-    payload.color = float3(0.4f, 0.6f, 0.75f);
+    payload.color = float3(0.78f, 0.847f, 0.949f);
 }
 
 

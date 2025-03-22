@@ -34,6 +34,11 @@ private:
 	void CreateEntities();
 	void CreateLights();
 
+	float RandomFloat(float low, float high)
+	{
+		return (((float)(rand()) / (float)(RAND_MAX)) * (high - low)) + low;
+	}
+
 	// Geometry
 	Microsoft::WRL::ComPtr<ID3D12Resource> vertexBuffer;
 	D3D12_VERTEX_BUFFER_VIEW vbView{};
@@ -53,5 +58,7 @@ private:
 	std::vector<std::shared_ptr<Material>> materials;
 	std::vector<std::shared_ptr<GameEntity>> entities;
 	std::vector<Light> lights;
+
+	std::vector<float> sphereOffsets;
 };
 

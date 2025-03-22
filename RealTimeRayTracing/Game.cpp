@@ -88,8 +88,8 @@ Game::~Game()
 void Game::CreateCameras()
 {
 	// Initialize camera field
-	DirectX::XMFLOAT3 camInitPos = { 0.04f, 0.0f, -3.92f };
-	DirectX::XMFLOAT3 camInitRot = { 0.0f, 0.0f, -1.0f };
+	DirectX::XMFLOAT3 camInitPos = { 0.04f, 2.0f, -3.92f };
+	DirectX::XMFLOAT3 camInitRot = { 0.2f, 0.0f, -1.0f };
 	cameras.push_back(std::make_shared<Camera>((float)Window::Width() / (float)Window::Height(), camInitPos, camInitRot, (float)XM_PI / 3));
 
 	activeCameraIndex = 0;
@@ -116,14 +116,15 @@ void Game::CreateGeometry()
 // --------------------------------------------------------
 void Game::CreateMaterials()
 {
-	materials.push_back(std::make_shared<Material>(1.0, 0.0, 0.0));
-	/*for (int i = 0; i < 10; i++)
+	materials.push_back(std::make_shared<Material>(0.7, 0.7, 0.7)); // Floor material
+	materials.push_back(std::make_shared<Material>(0.95, 0.95, 0.95)); // Torus material
+	for (int i = 0; i < 20; i++)
 	{
 		materials.push_back(std::make_shared<Material>(
-			(float)(rand()) / (float)(RAND_MAX), 
-			(float)(rand()) / (float)(RAND_MAX), 
-			(float)(rand()) / (float)(RAND_MAX)));
-	} */
+			RandomFloat(0.0f, 1.0f),
+			RandomFloat(0.0f, 1.0f),
+			RandomFloat(0.0f, 1.0f)));
+	}
 }
 
 
@@ -132,17 +133,28 @@ void Game::CreateMaterials()
 // --------------------------------------------------------
 void Game::CreateEntities()
 {
-	entities.push_back(std::make_shared<GameEntity>(meshes[0], materials[0])); // Cube
-	entities[0]->GetTransform()->SetPosition(-2.0f, -0.3f, 1.0f);
-	entities[0]->GetTransform()->SetScale(0.5f, 0.5f, 0.5f);
+	entities.push_back(std::make_shared<GameEntity>(meshes[0], materials[0])); // Cube Floor
+	entities[0]->GetTransform()->SetPosition(0.0f, 0.0f, 1.0f);
+	entities[0]->GetTransform()->SetScale(4.0f, 0.5f, 4.0f);
 
-	entities.push_back(std::make_shared<GameEntity>(meshes[5], materials[0])); // Sphere
-	entities[1]->GetTransform()->SetPosition(0.0f, 0.5f, 0.0f);
+	entities.push_back(std::make_shared<GameEntity>(meshes[6], materials[1])); // Torus
+	entities[1]->GetTransform()->SetPosition(0.0f, 2.0f, 0.0f);
 	entities[1]->GetTransform()->SetScale(0.5f, 0.5f, 0.5f);
 
-	entities.push_back(std::make_shared<GameEntity>(meshes[2], materials[0])); // Helix
-	entities[2]->GetTransform()->SetPosition(2.0f, 0.2f, 0.0f);
-	entities[2]->GetTransform()->SetScale(0.5f, 0.5f, 0.5f);
+	for (int i = 0; i < 20; i++) 
+	{
+		entities.push_back(std::make_shared<GameEntity>(meshes[5], materials[i + 2]));
+		float scale = RandomFloat(0.1f, 0.3f);
+		entities[i + 2]->GetTransform()->SetPosition(
+			RandomFloat(-2.0f, 2.0f),
+			scale + 0.5f, 
+			RandomFloat(-2.0f, 2.0f));
+		entities[i + 2]->GetTransform()->SetScale(scale, scale, scale);
+
+		sphereOffsets.push_back(RandomFloat(-0.0007f, 0.0007f)); // x direction
+		sphereOffsets.push_back(RandomFloat(-0.0007f, 0.0007f)); // y direction
+		sphereOffsets.push_back(RandomFloat(-XM_PI, XM_PI));   // time offset
+	}
 }
 
 
@@ -224,11 +236,14 @@ void Game::Update(float deltaTime, float totalTime)
 		Window::Quit();
 
 	// Move objects
-	entities[0]->GetTransform()->MoveAbsolute(0.0f, 0.0006f * cosf(totalTime + ((4*XM_PI)/3)), 0.0f);
-	entities[1]->GetTransform()->MoveAbsolute(0.0f, 0.0006f * cosf(totalTime + ((2*XM_PI)/3)), 0.0f);
-	entities[2]->GetTransform()->MoveAbsolute(0.0f, 0.0006f * cosf(totalTime), 0.0f);
-
-	entities[0]->GetTransform()->Rotate(0.0f, 0.0f, -1.0f * deltaTime);
+	entities[1]->GetTransform()->Rotate(-1.0f * deltaTime, 0.0f, 0.0f);
+	for (int i = 0; i < 20; i++)
+	{
+		entities[i + 2]->GetTransform()->MoveAbsolute(
+			sphereOffsets[i * 3] * cosf((totalTime + sphereOffsets[(i * 3) + 2]) * 0.8),
+			0.0f, 
+			sphereOffsets[(i * 3) + 1] * cosf((totalTime + sphereOffsets[(i * 3) + 2])) * 0.8);
+	}
 
 	// Update cameras
 	cameras[activeCameraIndex]->Update(deltaTime);
@@ -245,7 +260,7 @@ void Game::Draw(float deltaTime, float totalTime)
 		Graphics::BackBuffers[Graphics::SwapChainIndex()];
 
 	// Update TLAS to contain the latest transformations from this frame
-	//RayTracing::CreateTopLevelAccelerationStructureForScene(entities);
+	RayTracing::CreateTopLevelAccelerationStructureForScene(entities);
 
 	// Perform ray trace (which also copies the results to the back buffer)
 	RayTracing::Raytrace(cameras[activeCameraIndex], currentBackBuffer);
