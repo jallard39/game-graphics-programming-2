@@ -116,14 +116,16 @@ void Game::CreateGeometry()
 // --------------------------------------------------------
 void Game::CreateMaterials()
 {
-	materials.push_back(std::make_shared<Material>(0.7, 0.7, 0.7)); // Floor material
-	materials.push_back(std::make_shared<Material>(0.95, 0.95, 0.95)); // Torus material
+	materials.push_back(std::make_shared<Material>(0.5, 0.5, 0.5, 1.0f)); // Floor material
+	materials.push_back(std::make_shared<Material>(0.95, 0.95, 0.95, 0.0f)); // Torus material
+	float roughnesses[] = { 0.0f, 0.25f, 0.5f, 0.75f, 1.0f };
 	for (int i = 0; i < 20; i++)
 	{
 		materials.push_back(std::make_shared<Material>(
 			RandomFloat(0.0f, 1.0f),
 			RandomFloat(0.0f, 1.0f),
-			RandomFloat(0.0f, 1.0f)));
+			RandomFloat(0.0f, 1.0f),
+			roughnesses[RandomInt(0, 5)]));
 	}
 }
 
@@ -151,8 +153,8 @@ void Game::CreateEntities()
 			RandomFloat(-2.0f, 2.0f));
 		entities[i + 2]->GetTransform()->SetScale(scale, scale, scale);
 
-		sphereOffsets.push_back(RandomFloat(-0.0007f, 0.0007f)); // x direction
-		sphereOffsets.push_back(RandomFloat(-0.0007f, 0.0007f)); // y direction
+		sphereOffsets.push_back(RandomFloat(-0.007f, 0.007f)); // x direction
+		sphereOffsets.push_back(RandomFloat(-0.007f, 0.007f)); // y direction
 		sphereOffsets.push_back(RandomFloat(-XM_PI, XM_PI));   // time offset
 	}
 }

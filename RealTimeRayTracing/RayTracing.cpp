@@ -285,7 +285,7 @@ void RayTracing::CreateRaytracingPipelineState(std::wstring raytracingShaderLibr
 
 	// === Shader config (payload) ===
 	D3D12_RAYTRACING_SHADER_CONFIG shaderConfigDesc = {};
-	shaderConfigDesc.MaxPayloadSizeInBytes = sizeof(DirectX::XMFLOAT3);	// Assuming a float3 color for now
+	shaderConfigDesc.MaxPayloadSizeInBytes = sizeof(DirectX::XMFLOAT3) + sizeof(unsigned int) * 2;
 	shaderConfigDesc.MaxAttributeSizeInBytes = sizeof(DirectX::XMFLOAT2); // Assuming a float2 for barycentric coords for now
 
 	D3D12_STATE_SUBOBJECT shaderConfigSubObj = {};
@@ -689,8 +689,8 @@ void RayTracing::CreateTopLevelAccelerationStructureForScene(std::vector<std::sh
 		// Set up the entity data for this entity, too
 		// - mesh index tells us which cbuffer
 		// - instance ID tells us which instance in that cbuffer
-		DirectX::XMFLOAT3 c = scene[i]->GetMaterial()->GetColorTint();
-		entityData[meshBlasIndex].color[instDesc.InstanceID] = DirectX::XMFLOAT4(c.x, c.y, c.z, 1);
+		DirectX::XMFLOAT4 c = scene[i]->GetMaterial()->GetColorTintAndRoughness();
+		entityData[meshBlasIndex].color[instDesc.InstanceID] = DirectX::XMFLOAT4(c.x, c.y, c.z, c.w);
 
 		// On to the next instance for this mesh
 		instanceIDs[meshBlasIndex]++;

@@ -38,6 +38,10 @@ private:
 	{
 		return (((float)(rand()) / (float)(RAND_MAX)) * (high - low)) + low;
 	}
+	int RandomInt(int low, int high)
+	{
+		return floor(RandomFloat(low, high));
+	}
 
 	// Geometry
 	Microsoft::WRL::ComPtr<ID3D12Resource> vertexBuffer;
