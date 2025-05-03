@@ -127,6 +127,26 @@ void Game::CreateMaterials()
 			RandomFloat(0.0f, 1.0f),
 			roughnesses[RandomInt(0, 5)]));
 	}
+	materials.push_back(std::make_shared<Material>(1.0f, 1.0f, 1.0f, 1.0f));
+	materials[22]->AddTexture(Graphics::LoadTexture(FixPath(L"../../Assets/Textures/Cobblestone/cobblestone_albedo.png").c_str()), 0);
+	materials[22]->AddTexture(Graphics::LoadTexture(FixPath(L"../../Assets/Textures/Cobblestone/cobblestone_metal.png").c_str()), 1);
+	materials[22]->AddTexture(Graphics::LoadTexture(FixPath(L"../../Assets/Textures/Cobblestone/cobblestone_normals.png").c_str()), 2);
+	materials[22]->AddTexture(Graphics::LoadTexture(FixPath(L"../../Assets/Textures/Cobblestone/cobblestone_roughness.png").c_str()), 3);
+	materials[22]->FinalizeMaterial();
+
+	materials.push_back(std::make_shared<Material>(1.0f, 1.0f, 1.0f, 1.0f));
+	materials[23]->AddTexture(Graphics::LoadTexture(FixPath(L"../../Assets/Textures/Wood/wood_albedo.png").c_str()), 0);
+	materials[23]->AddTexture(Graphics::LoadTexture(FixPath(L"../../Assets/Textures/Wood/wood_metal.png").c_str()), 1);
+	materials[23]->AddTexture(Graphics::LoadTexture(FixPath(L"../../Assets/Textures/Wood/wood_normals.png").c_str()), 2);
+	materials[23]->AddTexture(Graphics::LoadTexture(FixPath(L"../../Assets/Textures/Wood/wood_roughness.png").c_str()), 3);
+	materials[23]->FinalizeMaterial();
+
+	materials.push_back(std::make_shared<Material>(1.0f, 1.0f, 1.0f, 1.0f));
+	materials[24]->AddTexture(Graphics::LoadTexture(FixPath(L"../../Assets/Textures/Scratched/scratched_albedo.png").c_str()), 0);
+	materials[24]->AddTexture(Graphics::LoadTexture(FixPath(L"../../Assets/Textures/Scratched/scratched_metal.png").c_str()), 1);
+	materials[24]->AddTexture(Graphics::LoadTexture(FixPath(L"../../Assets/Textures/Scratched/scratched_normals.png").c_str()), 2);
+	materials[24]->AddTexture(Graphics::LoadTexture(FixPath(L"../../Assets/Textures/Scratched/scratched_roughness.png").c_str()), 3);
+	materials[24]->FinalizeMaterial();
 }
 
 
@@ -139,19 +159,27 @@ void Game::CreateEntities()
 	entities[0]->GetTransform()->SetPosition(0.0f, 0.0f, 1.0f);
 	entities[0]->GetTransform()->SetScale(4.0f, 0.5f, 4.0f);
 
-	entities.push_back(std::make_shared<GameEntity>(meshes[6], materials[1])); // Torus
+	entities.push_back(std::make_shared<GameEntity>(meshes[6], materials[22])); // Torus
 	entities[1]->GetTransform()->SetPosition(0.0f, 2.0f, 0.0f);
 	entities[1]->GetTransform()->SetScale(0.5f, 0.5f, 0.5f);
+
+	entities.push_back(std::make_shared<GameEntity>(meshes[2], materials[24])); // Helix
+	entities[2]->GetTransform()->SetPosition(-2.0f, 2.0f, 0.0f);
+	entities[2]->GetTransform()->SetScale(0.5f, 0.5f, 0.5f);
+
+	entities.push_back(std::make_shared<GameEntity>(meshes[0], materials[23])); // Cube
+	entities[3]->GetTransform()->SetPosition(2.0f, 2.0f, 0.0f);
+	entities[3]->GetTransform()->SetScale(0.4f, 0.4f, 0.4f);
 
 	for (int i = 0; i < 20; i++) 
 	{
 		entities.push_back(std::make_shared<GameEntity>(meshes[5], materials[i + 2]));
 		float scale = RandomFloat(0.1f, 0.3f);
-		entities[i + 2]->GetTransform()->SetPosition(
+		entities[i + 4]->GetTransform()->SetPosition(
 			RandomFloat(-2.0f, 2.0f),
 			scale + 0.5f, 
 			RandomFloat(-2.0f, 2.0f));
-		entities[i + 2]->GetTransform()->SetScale(scale, scale, scale);
+		entities[i + 4]->GetTransform()->SetScale(scale, scale, scale);
 
 		sphereOffsets.push_back(RandomFloat(-0.007f, 0.007f)); // x direction
 		sphereOffsets.push_back(RandomFloat(-0.007f, 0.007f)); // y direction
@@ -239,9 +267,11 @@ void Game::Update(float deltaTime, float totalTime)
 
 	// Move objects
 	entities[1]->GetTransform()->Rotate(-1.0f * deltaTime, 0.0f, 0.0f);
+	entities[2]->GetTransform()->Rotate(0.0f, -1.0f * deltaTime, 0.0f);
+	entities[3]->GetTransform()->Rotate(-1.0f * deltaTime, -1.0f * deltaTime, 0.0f);
 	for (int i = 0; i < 20; i++)
 	{
-		entities[i + 2]->GetTransform()->MoveAbsolute(
+		entities[i + 4]->GetTransform()->MoveAbsolute(
 			sphereOffsets[i * 3] * cosf((totalTime + sphereOffsets[(i * 3) + 2]) * 0.8),
 			0.0f, 
 			sphereOffsets[(i * 3) + 1] * cosf((totalTime + sphereOffsets[(i * 3) + 2])) * 0.8);

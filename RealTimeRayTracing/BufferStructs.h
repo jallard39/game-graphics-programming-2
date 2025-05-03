@@ -28,9 +28,19 @@ struct RaytracingSceneData
 	float pad;
 };
 
+// Struct for storing material data
+struct MaterialData
+{
+	DirectX::XMFLOAT4 color;
+	int albedoIndex;
+	int normalIndex;
+	int roughIndex;
+	int metalIndex;
+};
+
 // Ensure this matches Raytracing shader define!
 #define MAX_INSTANCES_PER_BLAS 100
 struct RaytracingEntityData
 {
-	DirectX::XMFLOAT4 color[MAX_INSTANCES_PER_BLAS];
+	MaterialData mat[MAX_INSTANCES_PER_BLAS];
 };

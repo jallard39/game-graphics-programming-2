@@ -13,7 +13,7 @@ Material::Material(
 	uvScale(uvScale),
 	uvOffset(uvOffset)
 {
-	
+
 }
 
 Material::Material(
@@ -44,7 +44,7 @@ Material::Material(float r, float g, float b, float roughness)
 	SetUVOffset(0.0, 0.0);
 }
 
-Material::Material(DirectX::XMFLOAT3 colorTint) : 
+Material::Material(DirectX::XMFLOAT3 colorTint) :
 	colorTint(colorTint)
 {
 	SetRoughness(1.0f);
@@ -116,7 +116,8 @@ DirectX::XMFLOAT2 Material::GetUVOffset()
 
 D3D12_GPU_DESCRIPTOR_HANDLE Material::GetFinalGPUHandleForSRVs()
 {
-	return finalGPUHandleForSRVs;
+	if (lastIndexUsed == 0) return (D3D12_GPU_DESCRIPTOR_HANDLE)0;
+	else return finalGPUHandleForSRVs;
 }
 
 // ----------------------

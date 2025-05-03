@@ -89,6 +89,8 @@ namespace Graphics
 		D3D12_CPU_DESCRIPTOR_HANDLE firstDescriptorToCopy,
 		unsigned int numDescriptorsToCopy);
 
+	UINT GetDescriptorIndex(D3D12_GPU_DESCRIPTOR_HANDLE handle);
+
 	// Ray Tracing
 	Microsoft::WRL::ComPtr<ID3D12Resource> CreateBuffer(
 		UINT64 size,

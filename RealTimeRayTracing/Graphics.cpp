@@ -674,7 +674,7 @@ D3D12_GPU_DESCRIPTOR_HANDLE Graphics::FillNextConstantBufferAndGetGPUDescriptorH
 // --------------------------------------------------------
 // Copies one or more CPU-side (non-shader-visible) descriptors to the final descriptor heap that 
 // we use when drawing (the CBV/SRV descriptor heap) and return the handle to the location of the 
-// first one. We can then use this handle to denote the start of a descriptor table, which we’ll 
+// first one. We can then use this handle to denote the start of a descriptor table, which weï¿½ll 
 // need in our material class.
 // 
 // firstDescriptorToCopy - The first descriptor to copy
@@ -826,6 +826,18 @@ void Graphics::ReserveDescriptorHeapSlot(D3D12_CPU_DESCRIPTOR_HANDLE* reservedCP
 	// Update the overall offset if at least one handle was reserved
 	if (reservedCPUHandle || reservedGPUHandle)
 		srvDescriptorOffset++;
+}
+
+
+// --------------------------------------------------------
+// Calculates the index of a descriptor in the descriptor
+// heap given its GPU handle
+// 
+// handle - GPU descriptor handle of the descriptor to find
+// --------------------------------------------------------
+UINT Graphics::GetDescriptorIndex(D3D12_GPU_DESCRIPTOR_HANDLE handle)
+{
+	return (UINT)(handle.ptr - CBVSRVDescriptorHeap->GetGPUDescriptorHandleForHeapStart().ptr) / (UINT)cbvSrvDescriptorHeapIncrementSize;
 }
 
 

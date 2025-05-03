@@ -27,6 +27,15 @@ struct RayPayload
 // Note: We'll be using the built-in BuiltInTriangleIntersectionAttributes struct
 // for triangle attributes, so no need to define our own.  It contains a single float2.
 
+// Layout of data from the material buffer
+struct MaterialData
+{
+    float4 color;
+    uint albedoIndex;
+    uint normalIndex;
+    uint roughIndex;
+    uint metalIndex;
+};
 
 
 // === Constant buffers ===
@@ -41,7 +50,7 @@ cbuffer SceneData : register(b0)
 #define MAX_INSTANCES_PER_BLAS 100
 cbuffer ObjectData : register(b1)
 {
-    float4 entityColor[MAX_INSTANCES_PER_BLAS];
+    MaterialData mat[MAX_INSTANCES_PER_BLAS];
 };
 
 
@@ -57,6 +66,9 @@ RaytracingAccelerationStructure SceneTLAS	: register(t0);
 ByteAddressBuffer IndexBuffer        		: register(t1);
 ByteAddressBuffer VertexBuffer				: register(t2);
 
+// Bindless Textures
+Texture2D allTexture2Ds[] : register(t0, space1);
+SamplerState BasicSampler : register(s0);
 
 // === Helpers ===
 
@@ -239,7 +251,8 @@ void ClosestHit(inout RayPayload payload, BuiltInTriangleIntersectionAttributes 
     }
 	
 	// We've hit, so adjust the payload color by this instance's color
-    payload.color *= entityColor[InstanceID()].rgb;
+    payload.color *= mat[InstanceID()].color.rgb;
+    float roughness = mat[InstanceID()].color.a;
 
 	// Calc a unique RNG value for this ray, based on the "uv" of this pixel and other per-ray data
     float2 uv = (float2) DispatchRaysIndex() / (float2) DispatchRaysDimensions();
@@ -248,11 +261,18 @@ void ClosestHit(inout RayPayload payload, BuiltInTriangleIntersectionAttributes 
 	// Look up vertex data and interpolate it
     Vertex interpolatedVert = InterpolateVertices(PrimitiveIndex(), hitAttributes.barycentrics);
     float3 normal_WS = normalize(mul(interpolatedVert.normal, (float3x3) ObjectToWorld4x3()));
+	
+	// If using a texture, sample texture
+    if (mat[InstanceID()].albedoIndex != -1)
+    {
+		payload.color *= allTexture2Ds[mat[InstanceID()].albedoIndex].SampleLevel(BasicSampler, interpolatedVert.uv, 0).rgb;
+        roughness *= allTexture2Ds[mat[InstanceID()].roughIndex].SampleLevel(BasicSampler, interpolatedVert.uv, 0).r;
+    }
     
 	// Interpolate between perfect reflection and random bounce based on roughness
     float3 refl = reflect(WorldRayDirection(), normal_WS);
     float3 randomBounce = RandomCosineWeightedHemisphere(rand(rng), rand(rng.yx), normal_WS);
-    float3 dir = normalize(lerp(refl, randomBounce, entityColor[InstanceID()].a));
+    float3 dir = normalize(lerp(refl, randomBounce, roughness));
 	
 	RayDesc ray;
     ray.Origin = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
