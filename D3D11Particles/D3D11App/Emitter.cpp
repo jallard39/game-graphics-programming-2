@@ -1,26 +1,51 @@
 #include "Emitter.h"
 #include "Graphics.h"
 
+// Helper macro for getting a float between min and max
+#define RandomRange(min, max) ((float)rand() / RAND_MAX * (max - min) + min)
 
 using namespace DirectX;
 
 Emitter::Emitter(
+	float x, float y, float z,
 	int maxParticles,
 	float maxParticleLifetime,
-	int particlesPerEmit,
-	float secondsPerEmit,
+	float secondsPerParticle,
+	DirectX::XMFLOAT4 startColor,
+	DirectX::XMFLOAT4 endColor,
+	float startSize,
+	float endSize,
+	float fadeOut,
+	DirectX::XMFLOAT3 startVelocity,
+	DirectX::XMFLOAT3 velocityRandomRange,
+	DirectX::XMFLOAT3 acceleration,
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> texture,
+	Microsoft::WRL::ComPtr<ID3D11SamplerState> sampler,
 	std::shared_ptr<SimpleVertexShader> particleVS,
 	std::shared_ptr<SimplePixelShader> particlePS) :
 	maxParticles(maxParticles),
 	maxParticleLifetime(maxParticleLifetime),
-	particlesPerEmit(particlesPerEmit),
-	secondsPerEmit(secondsPerEmit),
+	secondsPerParticle(secondsPerParticle),
+	startColor(startColor),
+	endColor(endColor),
+	startSize(startSize),
+	endSize(endSize),
+	fadeOut(fadeOut),
+	startVelocity(startVelocity),
+	velocityRandomRange(velocityRandomRange),
+	acceleration(acceleration),
+	texture(texture),
+	sampler(sampler),
 	particleVS(particleVS),
-	particlePS(particlePS)
+	particlePS(particlePS),
+	particles(0)
 {
 	// Set transform 
 	transform = std::make_shared<Transform>();
-	transform->SetPosition(0.0f, 0.0f, 0.0f);
+	transform->SetPosition(x, y, z);
+
+	// Pause until first frame
+	paused = true;
 
 	// Set up emitter properties
 	indexFirstAlive = 0;
@@ -29,7 +54,7 @@ Emitter::Emitter(
 	timeSinceLastEmit = 0;
 
 	// Delete existing resources
-	//if (particles) delete[] particles;
+	if(particles) delete[] particles;
 	particleIndexBuffer.Reset();
 	particleDataBuffer.Reset();
 	particleDataSRV.Reset();
@@ -54,6 +79,10 @@ int Emitter::GetIndexFirstAlive() { return indexFirstAlive; }
 int Emitter::GetIndexFirstDead() { return indexFirstDead; }
 int Emitter::GetNumLivingParticles() { return numLivingParticles; }
 float Emitter::GetTimeSinceLastEmit() { return timeSinceLastEmit; }
+
+bool Emitter::IsPaused() { return paused; }
+void Emitter::Pause() { paused = true; }
+void Emitter::Unpause() { paused = false; }
 
 void Emitter::SetParticleTexture(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> texture) { this->texture = texture; }
 void Emitter::SetSampler(Microsoft::WRL::ComPtr<ID3D11SamplerState> sampler) { this->sampler = sampler; }
@@ -105,6 +134,7 @@ void Emitter::CreateBuffers()
 	D3D11_SUBRESOURCE_DATA initialIndexData = {};
 	initialIndexData.pSysMem = indices;
 	Graphics::Device->CreateBuffer(&ibd, &initialIndexData, particleIndexBuffer.GetAddressOf());
+	delete[] indices;
 }
 
 
@@ -118,6 +148,12 @@ void Emitter::EmitParticle(float currentTime)
 	particles[indexFirstDead].EmitTime = currentTime;
 	particles[indexFirstDead].StartPos = transform->GetPosition();
 
+	// Set velocity random range
+	particles[indexFirstDead].StartVelocity = startVelocity;
+	particles[indexFirstDead].StartVelocity.x += velocityRandomRange.x * RandomRange(-1.0f, 1.0f);
+	particles[indexFirstDead].StartVelocity.y += velocityRandomRange.y * RandomRange(-1.0f, 1.0f);
+	particles[indexFirstDead].StartVelocity.z += velocityRandomRange.z * RandomRange(-1.0f, 1.0f);
+
 	// Increment particle counters
 	indexFirstDead = (indexFirstDead + 1) % maxParticles;
 	numLivingParticles += 1;
@@ -125,6 +161,9 @@ void Emitter::EmitParticle(float currentTime)
 
 void Emitter::Update(float dt, float currentTime) 
 {
+	// If paused, don't update
+	if (paused) return;
+	
 	// Check particle ages
 	for (int i = 0; i < numLivingParticles; i++)
 	{
@@ -137,15 +176,18 @@ void Emitter::Update(float dt, float currentTime)
 	}
 	
 	timeSinceLastEmit += dt;
-	while (timeSinceLastEmit > secondsPerEmit)
+	while (timeSinceLastEmit > secondsPerParticle)
 	{
 		EmitParticle(currentTime);
-		timeSinceLastEmit -= secondsPerEmit;
+		timeSinceLastEmit -= secondsPerParticle;
 	}
 }
 
 void Emitter::Draw(float currentTime, std::shared_ptr<FPSCamera> camera)
 {
+	// If paused, don't draw
+	if (paused) return;
+	
 	CopyResourcesToGPU();
 
 	// Set index buffer, unbind vertex buffer
@@ -162,7 +204,14 @@ void Emitter::Draw(float currentTime, std::shared_ptr<FPSCamera> camera)
 	// Send data to the vertex shader
 	particleVS->SetMatrix4x4("view", camera->GetView());
 	particleVS->SetMatrix4x4("projection", camera->GetProjection());
+	particleVS->SetFloat4("startColor", startColor);
+	particleVS->SetFloat4("endColor", endColor);
 	particleVS->SetFloat("currentTime", currentTime);
+	particleVS->SetFloat3("acceleration", acceleration);
+	particleVS->SetFloat("startSize", startSize);
+	particleVS->SetFloat("endSize", endSize);
+	particleVS->SetFloat("lifetime", maxParticleLifetime);
+	particleVS->SetFloat("fadeOut", fadeOut);
 	particleVS->CopyAllBufferData();
 
 	particleVS->SetShaderResourceView("ParticleData", particleDataSRV);

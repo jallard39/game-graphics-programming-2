@@ -69,7 +69,7 @@ void Game::Initialize()
 
 	// Create the camera
 	camera = std::make_shared<FPSCamera>(
-		XMFLOAT3(0.0f, 0.0f, -15.0f),	// Position
+		XMFLOAT3(0.0f, 0.0f, 15.0f),	// Position
 		5.0f,					// Move speed
 		0.002f,					// Look speed
 		XM_PIDIV4,				// Field of view
@@ -77,6 +77,7 @@ void Game::Initialize()
 		0.01f,					// Near clip
 		100.0f,					// Far clip
 		CameraProjectionType::Perspective);
+	camera->GetTransform()->SetRotation(0.0f, -XM_PI, 0.0f);
 }
 
 
@@ -121,7 +122,7 @@ void Game::LoadAssetsAndCreateEntities()
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> woodA, woodN, woodR, woodM;
 
 	// Particle textures	
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> star06;
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> star, circle, smoke;
 
 	// Quick pre-processor macro for simplifying texture loading calls below
 #define LoadTexture(path, srv) CreateWICTextureFromFile(Graphics::Device.Get(), Graphics::Context.Get(), FixPath(path).c_str(), 0, srv.GetAddressOf());
@@ -160,7 +161,9 @@ void Game::LoadAssetsAndCreateEntities()
 	LoadTexture(AssetPath + L"Textures/PBR/wood_roughness.png", woodR);
 	LoadTexture(AssetPath + L"Textures/PBR/wood_metal.png", woodM);
 
-	LoadTexture(AssetPath + L"Particles/PNG (Transparent)/star_06.png", star06);
+	LoadTexture(AssetPath + L"Particles/PNG (Transparent)/star_08.png", star);
+	LoadTexture(AssetPath + L"Particles/PNG (Transparent)/circle_01.png", circle);
+	LoadTexture(AssetPath + L"Particles/PNG (Transparent)/smoke_04.png", smoke);
 #undef LoadTexture
 
 
@@ -364,7 +367,7 @@ void Game::LoadAssetsAndCreateEntities()
 
 	// ======= Create particle materials =============
 
-	bool additive = false;
+	bool additive = true;
 
 	// Blend state description for either additive or alpha blending (based on �additive� boolean)
 	D3D11_BLEND_DESC additiveBlendDesc = {};
@@ -385,12 +388,59 @@ void Game::LoadAssetsAndCreateEntities()
 	particleDepthDesc.DepthFunc = D3D11_COMPARISON_LESS; // Standard depth comparison
 	Graphics::Device->CreateDepthStencilState(&particleDepthDesc, particleDepthState.GetAddressOf());
 
-	// Create a particle emitter
-	std::shared_ptr<Emitter> emitter1 = std::make_shared<Emitter>(10, 5.0, 1, 1.0, particleVS, particlePS);
-	emitter1->GetTransform()->SetPosition(0.0f, 0.0f, 0.0f);
-	emitter1->SetParticleTexture(star06);
-	emitter1->SetSampler(sampler);
-	emitters.push_back(emitter1);
+	// Particle emitter #1: star fountain
+	emitters.push_back(std::make_shared<Emitter>(
+		0.0f, 0.0f, 0.0f,	// position
+		250,	// max particles
+		5.0,	// max lifetime
+		0.02,	// seconds per particle
+		DirectX::XMFLOAT4(1.0f, 0.9f, 0.0f, 1.0f), // start color
+		DirectX::XMFLOAT4(1.0f, 0.396f, 0.0f, 1.0f), // end color
+		0.4,	// start size
+		0.4,	// end size
+		1.0,	// fade out
+		DirectX::XMFLOAT3(0.0f, 2.0f, 0.0f),	// start velocity
+		DirectX::XMFLOAT3(0.6f, 0.2f, 0.6f),	// velocity random range
+		DirectX::XMFLOAT3(0.0f, -1.0f, 0.0f),	// acceleration
+		star, sampler,		// texture and sampler
+		particleVS, particlePS	// shaders
+	));
+
+	// Particle emitter #2: pink circle
+	emitters.push_back(std::make_shared<Emitter>(
+		5.0f, 0.0f, 0.0f,	// position
+		30,	// max particles
+		2.0,	// max lifetime
+		0.8,	// seconds per particle
+		DirectX::XMFLOAT4(0.3f, 0.0f, 1.0f, 1.0f), // start color
+		DirectX::XMFLOAT4(1.0f, 0.0f, 1.0f, 1.0f), // end color
+		0.0,	// start size
+		3.0,	// end size
+		0.5,	// fade out
+		DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f),	// start velocity
+		DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f),	// velocity random range
+		DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f),	// acceleration
+		circle, sampler,		// texture and sampler
+		particleVS, particlePS	// shaders
+	));
+
+	// Particle emitter #3: smoke
+	emitters.push_back(std::make_shared<Emitter>(
+		-5.0f, 0.0f, 0.0f,	// position
+		150,	// max particles
+		5.0,	// max lifetime
+		0.42,	// seconds per particle
+		DirectX::XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f), // start color
+		DirectX::XMFLOAT4(0.8f, 0.8f, 0.8f, 1.0f), // end color
+		0.5,	// start size
+		3.0,	// end size
+		1.2,	// fade out
+		DirectX::XMFLOAT3(0.0f, 1.0f, 0.0f),	// start velocity
+		DirectX::XMFLOAT3(0.2f, 0.2f, 0.2f),	// velocity random range
+		DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f),	// acceleration
+		smoke, sampler,		// texture and sampler
+		particleVS, particlePS	// shaders
+	));
 }
 
 // --------------------------------------------------------
@@ -544,6 +594,8 @@ void Game::Update(float deltaTime, float totalTime)
 	// Update the particles this frame
 	for (int i = 0; i < emitters.size(); i++)
 	{
+		// Unpause on first frame
+		if (emitters[i]->IsPaused()) emitters[i]->Unpause();
 		emitters[i]->Update(deltaTime, totalTime);
 	}
 

@@ -10,5 +10,11 @@ SamplerState BasicSampler : register(s0);
 // --------------------------------------------------------
 float4 main(VertexToPixel_Particle input) : SV_TARGET
 {
-    return ParticleTexture.Sample(BasicSampler, input.uv);
+    // Black background pngs
+    //float4 textureSample = ParticleTexture.Sample(BasicSampler, input.uv);
+    //return float4(textureSample.r, textureSample.g, textureSample.b, textureSample.r) * input.colorTint;
+    
+    // Transparent pngs
+    return ParticleTexture.Sample(BasicSampler, input.uv) * input.colorTint;
+
 }

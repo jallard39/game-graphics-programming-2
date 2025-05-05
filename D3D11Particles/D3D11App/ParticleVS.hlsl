@@ -5,7 +5,17 @@ cbuffer ExternalData : register(b0)
 {
     matrix view;
     matrix projection;
+    
+    float4 startColor;
+    float4 endColor;
+    
     float currentTime;
+    float3 acceleration;
+    
+    float startSize;
+    float endSize;
+    float lifetime;
+    float fadeOut;
 };
 
 // Particle struct for particle emitters
@@ -13,6 +23,7 @@ struct Particle
 {
     float EmitTime;
     float3 StartPosition;
+    float3 StartVelocity;
 };
 
 // Buffer of particle data
@@ -32,10 +43,12 @@ VertexToPixel_Particle main( uint id : SV_VertexID )
     // Grab one particle
     Particle p = ParticleData.Load(particleID);
 
-    // Simulation
+    // Calculate age and agePercent
     float age = currentTime - p.EmitTime;
-    pos = p.StartPosition + (age) * float3(2, 1, 1);
-    //float3 pos = accel * age * age / 2.0f + p.StartVelocity * age + p.StartPos
+    float agePercent = age / lifetime;
+    
+    // Simulate position
+    pos = acceleration * age * age / 2.0f + p.StartVelocity * age + p.StartPosition;
     
     // Offsets for the 4 corners of a quad - we'll only use one for each
     // vertex, but which one depends on the cornerID
@@ -45,7 +58,8 @@ VertexToPixel_Particle main( uint id : SV_VertexID )
     offsets[2] = float2(+1.0f, -1.0f); // BR
     offsets[3] = float2(-1.0f, -1.0f); // BL
     
-    float size = 1.0f;
+    // Size interpolation
+    float size = lerp(startSize, endSize, agePercent);
     
     // Billboarding!
     // Offset the position based on the camera's right and up vectors
@@ -62,6 +76,10 @@ VertexToPixel_Particle main( uint id : SV_VertexID )
     uvs[2] = float2(1, 1); // BR
     uvs[3] = float2(0, 1); // BL
     output.uv = uvs[cornerID];
+    
+    // Set output color and fade
+    output.colorTint = lerp(startColor, endColor, agePercent);
+    output.colorTint *= saturate((lifetime - age) / fadeOut);
     
     return output;
 }
